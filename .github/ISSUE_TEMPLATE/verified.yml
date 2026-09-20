@@ -1,0 +1,15 @@
+name: I confirmed something from VERIFICATION.md
+description: Tell us an integration point works (or does not) on your setup
+labels: [verification]
+body:
+  - type: input
+    attributes: { label: Item, placeholder: "Stop hook exiting 2 keeps the turn open" }
+    validations: { required: true }
+  - type: input
+    attributes: { label: Claude Code version and OS }
+    validations: { required: true }
+  - type: dropdown
+    attributes: { label: Result, options: [Works as documented, Works with a change, Does not work] }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: Details }

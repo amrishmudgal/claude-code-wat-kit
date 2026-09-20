@@ -1,0 +1,20 @@
+name: Something did not work
+description: The installer, a hook, a guard rule or a tool misbehaved
+labels: [bug]
+body:
+  - type: input
+    attributes: { label: Kit version, description: "Last line of your project's CLAUDE.md", placeholder: v0.9.0 }
+    validations: { required: true }
+  - type: input
+    attributes: { label: Claude Code version and OS, placeholder: "claude --version, macOS 15 / Windows 11 / Ubuntu 24.04" }
+    validations: { required: true }
+  - type: dropdown
+    attributes:
+      label: Area
+      options: [Installer / extraction, Hooks (session brief, stop check), Guard, Permissions, visual-diff, env tools, A workflow, Other]
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: What happened, description: "Exact error text. Remove any secret values first." }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: What you expected }

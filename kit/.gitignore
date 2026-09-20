@@ -1,0 +1,34 @@
+# secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+credentials.json
+token.json
+
+# personal Claude Code settings
+.claude/settings.local.json
+CLAUDE.local.md
+
+# disposable
+.tmp/
+*.log
+.DS_Store
+Thumbs.db
+
+# dependencies and build output (all common stacks)
+node_modules/
+.next/
+dist/
+build/
+out/
+.vercel/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+__pycache__/
+.venv/
+*.pyc
+supabase/.temp/
+supabase/.branches/

@@ -1,0 +1,3 @@
+# The installer is compared byte for byte in CI. Keep line endings stable on every OS.
+* text=auto eol=lf
+*.png binary

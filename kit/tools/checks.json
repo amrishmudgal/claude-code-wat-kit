@@ -1,0 +1,9 @@
+{
+  "_note": "Filled in by workflows/02_stack-selection.md. Leave a value empty to skip it. Example for a Node stack: lint = npm run lint",
+  "format": "",
+  "lint": "",
+  "typecheck": "",
+  "test": "",
+  "build": "",
+  "e2e": ""
+}

@@ -1,0 +1,12 @@
+# Weekly, grouped dependency updates. Claude merges the green ones at the start of each release (workflows/07_release.md).
+# Add the app's ecosystem (npm, pip, ...) and directory once the stack is chosen in workflows/02_stack-selection.md.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule: { interval: "weekly" }
+  - package-ecosystem: "npm"
+    directory: "/tools"
+    schedule: { interval: "weekly" }
+    groups:
+      tools: { patterns: ["*"] }
