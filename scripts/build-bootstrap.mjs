@@ -6,7 +6,7 @@ import { join, relative } from "node:path";
 
 const [kit = "kit", out = "dist/CLAUDE.md"] = process.argv.slice(2);
 const walk = (d) => readdirSync(d).flatMap((n) => { const p = join(d, n); return statSync(p).isDirectory() ? (n === ".git" ? [] : walk(p)) : [p]; });
-const files = walk(kit).map((p) => relative(kit, p).split("\\").join("/")).sort((a, b) => (a === "CLAUDE.md") - (b === "CLAUDE.md") || a.localeCompare(b));
+const files = walk(kit).map((p) => relative(kit, p).split("\\").join("/")).sort((a, b) => (a === "CLAUDE.md") - (b === "CLAUDE.md") || (a < b ? -1 : a > b ? 1 : 0)); // FIX: code-point order. localeCompare depends on the machine locale (POSIX on CI runners), which made dist differ per OS.
 
 const extractor = `import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";

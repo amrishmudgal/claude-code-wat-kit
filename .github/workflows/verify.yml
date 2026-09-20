@@ -7,6 +7,7 @@ permissions:
 jobs:
   test:
     strategy:
+      fail-fast: false   # FIX: show every OS result instead of cancelling the rest on the first failure
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node: [20, 22]

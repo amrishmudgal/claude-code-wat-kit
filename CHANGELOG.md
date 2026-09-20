@@ -5,6 +5,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions: [SemVer](https
 ## [0.9.0] - 2026-09-20
 First public release.
 
+### Fixed
+- Build sorted payload files with a locale-dependent comparison, so `dist/CLAUDE.md` differed between macOS and CI runners. Now code-point order, identical everywhere.
+
 ### Added
 - Self-extracting `dist/CLAUDE.md` installer: 64 files, replaces itself with a project CLAUDE.md under 50 lines. Handles CRLF; refuses a truncated file and writes nothing.
 - WAT operating model (`workflows/README.md`), workflow template, fixed order of work, six build questions in discovery and phase planning.
