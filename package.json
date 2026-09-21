@@ -1,6 +1,6 @@
 {
   "name": "claude-code-wat-kit",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "One-file project bootstrap for Claude Code. Source in kit/, installer in dist/CLAUDE.md.",
   "type": "module",
@@ -8,6 +8,6 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "node scripts/build-bootstrap.mjs kit dist/CLAUDE.md",
-    "test": "node tests/kit-lint.mjs && node tests/guard.test.mjs && node tests/roundtrip.mjs"
+    "test": "node tests/kit-lint.mjs && node tests/guard.test.mjs && node tests/smoke.test.mjs && node tests/roundtrip.mjs"
   }
 }

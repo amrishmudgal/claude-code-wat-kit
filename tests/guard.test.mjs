@@ -30,7 +30,7 @@ const ALLOW = [
   "vercel", "vercel rollback", "supabase db push", "supabase db reset", "cat .env.example", "node tools/env-check.mjs",
   "node tools/env-push.mjs --file .env.production.local --target production --dry-run", "rm -rf .tmp", "rm -rf node_modules",
   "cat workflows/README.md", "ls workflows/", "git add workflows/ && git commit -m 'docs(workflows): learned line'",
-  "echo x > .github/workflows/ci.yml", "node extract.mjs", "npm --prefix tools install",
+  "echo x > .github/workflows/ci.yml", "node extract.mjs", "npm --prefix tools install", "node tools/smoke.mjs --url https://app.example.com",
 ];
 let bad = 0;
 for (const c of ["git push", "git push origin", "git push -u origin HEAD"]) {

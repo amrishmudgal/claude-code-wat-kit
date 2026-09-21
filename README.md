@@ -24,7 +24,7 @@ Then type:
 go
 ```
 
-Claude writes a small extractor from the file, runs it, and the 130 KB installer replaces itself with a CLAUDE.md of under 50 lines plus 60-odd project files. It checks your machine, creates a private GitHub repo, installs the browser tooling, and asks you to restart. The next `go` starts discovery: a short interview that becomes your PRD.
+Claude writes a small extractor from the file, runs it, and the 145 KB installer replaces itself with a CLAUDE.md of under 50 lines plus 60-odd project files. It checks your machine, creates a private GitHub repo, installs the browser tooling, and asks you to restart. The next `go` starts discovery: a short interview that becomes your PRD.
 
 The full owner's guide is [kit/PLAYBOOK.md](kit/PLAYBOOK.md). It is also copied into every project.
 
@@ -63,6 +63,8 @@ flowchart LR
 
 **Order of work, always:** understand → research → clarify product questions → plan → build → env setup → test locally → deploy → verify live.
 
+**Deterministic first, in three layers:** how the agent works (scripts, generators, hooks), how work is proven (tests, pixel diff, smoke exit codes, never an impression), and how the app itself is built (business logic in tested code and database constraints, model calls at the edge). Rule of two: a sequence done by hand twice becomes a registered tool the third time.
+
 **Self-improvement loop:** read the full error → fix → verify → record the lesson as a *proposed* workflow change → you approve → it is applied. Workflows never change behind your back. That is enforced twice: edits under `workflows/` are on Claude Code's ask list, and the guard blocks shell writes to that folder.
 
 ---
@@ -86,8 +88,8 @@ CLAUDE.md                 < 50 lines. The loop and the rules. Loaded every sessi
 brain/                    00_INDEX 01_PRD 02_ARCHITECTURE 03_DESIGN 04_PLAN 05_STATE
                           06_DECISIONS 07_SECURITY 08_TEST_PLAN 09_RUNBOOK phases/
 workflows/                README (the WAT model) · _TEMPLATE · 00_bootstrap … 10_visual-qa
-tools/                    preflight · check · secret-scan · env-check · env-push · visual-diff
-                          guard · session-brief · stop-check · notify-slack
+tools/                    README (registry) · preflight · check · secret-scan · env-check · env-push
+                          visual-diff · smoke · guard · session-brief · stop-check · notify-slack
 .claude/
   settings.json           permissions (allow / ask / deny), hooks, plugins, 200k context cap
   commands/               /start /build /plan-phase /debug /review /ship /handoff /status
@@ -113,6 +115,8 @@ design/                   brand_assets/ mockups/ baselines/ visual.json
 | Same bug "fixed" twice | Two failed fixes end the session; the next starts clean from written evidence |
 | Invented APIs | Research step before planning and before first use of any outside API |
 | Process changing unnoticed | Ask-rule on `workflows/**` plus guard block plus proposals parked in the state file |
+| "It works" based on a look | Proof is an exit code or a number: a test per acceptance criterion, an automated two-account isolation test per user-data table, pixel diff, and `tools/smoke.mjs` on preview and production, whose exit code decides rollback |
+| AI logic deciding business outcomes | Backend rule: rules, money, dates, permissions and state machines in tested code and DB constraints; model calls at the edge with schema-validated output and a non-AI fallback |
 | Bad release | Phase branch → PR → CI → preview verified in a real browser → merge → production smoke test → automatic rollback on failure |
 
 ## The phases

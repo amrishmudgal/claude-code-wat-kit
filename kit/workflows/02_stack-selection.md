@@ -14,12 +14,13 @@
    - Mobile: decide native versus installable web app from the PRD, not from habit.
 4. One language across app and tools where possible. `tools/` ships as Node so it runs on every OS. Add Python tools only if the stack is Python.
 5. Send the `researcher` subagent to verify, today, for every paid-capable service: free-tier limits, first paid price, the limit this app will hit first, and that the versions and APIs you plan to use exist. Never quote a price from memory.
-6. If the app has an AI feature, first ask whether a rule, query or normal API does the job. If an LLM is needed, record failure mode, cost per run, latency budget, definition of correct, human fallback, and the model swap path.
+6. If the app has an AI feature, first ask whether a rule, query or normal API does the job. Most "AI features" are 90% ordinary code with one model call in the middle: design them that way. If an LLM is needed, record failure mode, cost per run, latency budget, definition of correct, human fallback, and the model swap path.
 
 ## Write it down
 - Fill `brain/02_ARCHITECTURE.md` completely, including folder layout, boundaries and data model.
 - One ADR per layer in `brain/06_DECISIONS.md`, each with cost and swap path.
-- Fill `tools/checks.json` and the Project commands block in `CLAUDE.md`. Playwright is already installed under `tools/` for visual QA; use it as the end-to-end runner too unless the stack has a strong native one.
+- Fill `tools/checks.json`, the first checks in `tools/smoke.json` (home page, health endpoint, a private URL that must redirect or return 401), and the Project commands block in `CLAUDE.md`.
+- Create the first project tools and register them in `tools/README.md`: reset the local database from migrations, seed deterministic demo data, regenerate types from the schema. Prefer wrapping the stack's own CLI over writing logic. Playwright is already installed under `tools/` for visual QA; use it as the end-to-end runner too unless the stack has a strong native one.
 - Fill the Levels section of `brain/08_TEST_PLAN.md` and the Environments table in `brain/09_RUNBOOK.md`.
 - Add stack-specific entries to `.gitignore`, a CI job to `.github/workflows/ci.yml`, and the app's package ecosystem to `.github/dependabot.yml`.
 - Draw the component flowchart and the ER diagram in `brain/02_ARCHITECTURE.md` (mermaid).

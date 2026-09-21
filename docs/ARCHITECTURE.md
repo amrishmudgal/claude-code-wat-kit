@@ -4,7 +4,7 @@ Why the kit is shaped the way it is. Read this before proposing a structural cha
 
 ## 1. One self-replacing file
 
-The installer is a `CLAUDE.md` because that is the one file Claude Code reads without being told to. It carries a 20-line extractor and a payload of `=====FILE: path=====` blocks inside a tilde fence, marked as data so the agent does not reason over 130 KB. The agent copies the extractor out, runs it, and the last file written is the short project `CLAUDE.md`, overwriting the installer. The payload is never loaded again.
+The installer is a `CLAUDE.md` because that is the one file Claude Code reads without being told to. It carries a 20-line extractor and a payload of `=====FILE: path=====` blocks inside a tilde fence, marked as data so the agent does not reason over 145 KB. The agent copies the extractor out, runs it, and the last file written is the short project `CLAUDE.md`, overwriting the installer. The payload is never loaded again.
 
 The extractor checks the file count before writing anything, refuses absolute and `..` paths, and normalises CRLF. The agent is told never to recreate payload files from memory: byte-identical or stop.
 
@@ -24,7 +24,15 @@ One task per session, then `/clear`. The Stop hook makes that safe by refusing t
 
 ## 3. Reasoning above, determinism below
 
-A step is pushed into `tools/` when it recurs, must be exact, touches secrets, or spends money. The agent decides *which* tool and *when*; it does not re-derive *how*. `visual-diff` is the clearest case: a model judging a screenshot is an opinion, a pixel mismatch percentage is a measurement.
+A step is pushed into `tools/` when it recurs, must be exact, touches secrets, or spends money, and needs no judgement. The agent decides *which* tool and *when*; it does not re-derive *how*. `visual-diff` is the clearest case: a model judging a screenshot is an opinion, a pixel mismatch percentage is a measurement.
+
+The principle is applied in three layers, because the first alone is not enough:
+
+1. **How the agent works.** Checks, secret scan, env tools, guard, hooks, CI, and the stack's own generators for boilerplate. `tools/README.md` is the registry, so "look for an existing tool first" is a lookup, not a guess. Rule of two: by hand twice, a tool the third time.
+2. **How work is proven.** "Done" is an exit code or a number: an automated test per acceptance criterion written before the code, an isolation test per user-data table, `visual-diff`, and `smoke` on preview and production. Browser exploration finds things; only a test proves them, because only a test runs again next week.
+3. **How the app is built.** Business rules, money, dates, permissions and state machines live in tested code and database constraints. A model call is an untrusted service at the edge with schema-validated output and a fallback. The product inherits the same 90%-per-step arithmetic as the agent does.
+
+What is deliberately *not* scripted: the release sequence as a whole, debugging, planning. They contain judgement. Script the execution of a decision, never the decision.
 
 ## 4. Safety comes from structure, because nobody reads the code
 

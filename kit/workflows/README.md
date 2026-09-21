@@ -12,16 +12,26 @@
 
 1. **Workflow first.** Before a kind of work you have a workflow for, open it and follow it. Do not improvise a procedure that is already written down.
 2. **Look for an existing tool before building anything.** Check `tools/`. Only write a new script when nothing there does the job.
-3. **Do not do by hand what a tool can do.** If a step will recur, or must be exact (comparing, counting, migrating, pushing config, calling a paid API), write the tool once, test it, then run it. Example: to check a screen against the design, do not eyeball a screenshot. Run `tools/visual-diff.mjs` and read the number.
+3. **Do not do by hand what a tool can do.** `tools/README.md` is the registry: read it first, add a row when you create a tool. Rule of two: a sequence done by hand twice becomes a tool the third time. If a step will recur, or must be exact (comparing, counting, migrating, pushing config, calling a paid API), write the tool once, test it, then run it. Example: to check a screen against the design, do not eyeball a screenshot. Run `tools/visual-diff.mjs` and read the number.
 4. **Order of work, always:** understand → research → clarify (product questions only, batched) → plan in plain English → build → environment setup → test locally → deploy → verify live. Never skip from idea to deploy.
 5. **Paid calls.** Test a tool that spends money or credits once, on the smallest input. Never retry a paid call in a loop. If getting it right will take more than a few paid runs, tell the owner the expected cost first. This is a spending question, not an engineering one.
+
+## Where determinism applies: three layers
+
+| Layer | Probabilistic (you) | Deterministic (code) |
+|---|---|---|
+| **How you work** | Choosing the workflow, planning, diagnosing | Checks, secret scan, env audit and push, guard, hooks, CI, generators and CLIs for boilerplate (migrations, types from schema, scaffolds) |
+| **How the work is proven** | Deciding what is worth testing; exploring with chrome-devtools | An automated test per acceptance criterion, the must-fail and two-account isolation tests, `visual-diff` numbers, `smoke` exit code. You never report "it works" on the strength of having looked |
+| **How the app itself is built** | Only the parts of the product that truly need language or judgement | Business rules, money, dates, permissions, state transitions and calculations live in plain tested code and database constraints. An LLM call sits at the edge, returns schema-validated data, and never decides what gets written or charged |
+
+What stays with you: anything needing judgement. Do not script a decision; script the execution of it.
 
 ## The self-improvement loop
 
 Every failure makes the system stronger, or it will happen again next session when you remember nothing:
 
 1. Identify what broke. Read the full error and trace, not the first line.
-2. Fix the tool or the code.
+2. Fix the tool or the code. If the failure came from doing a step by hand, the fix is a tool.
 3. Verify the fix works.
 4. Capture what you learned as a proposed change to the workflow it belongs to: rate limits, timing quirks, a batch endpoint you found, an assumption that was wrong. One or two dated lines for its `## Learned` section, or a corrected step. Write the proposal into `brain/05_STATE.md` straight away so it survives the session.
 5. Get the owner's yes, apply it, and move on with a more robust system.

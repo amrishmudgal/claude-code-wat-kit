@@ -11,11 +11,11 @@
 5. Cloud database: apply this phase's migrations to the cloud project with the stack's migration command. They were already applied and tested locally. Additive changes go before the code is merged. Destructive changes follow the two-release rule in `CLAUDE.md`, with a backup first once real users exist.
 6. Push the branch. Open a PR: what a user can now do, migrations included, new env vars, known issues, visual-diff numbers.
 7. Wait for CI and the preview deployment (`gh pr checks --watch`). If CI fails, fix it. Never bypass it.
-8. Open the preview URL with chrome-devtools. Run the critical flows from `brain/08_TEST_PLAN.md` at 375 and 1440. Console and network clean.
+8. Run `node tools/smoke.mjs --url <preview URL>`. If it fails, do not merge. Then open the preview URL with chrome-devtools. Run the critical flows from `brain/08_TEST_PLAN.md` at 375 and 1440. Console and network clean.
 
 ## Production
 9. Merge: `gh pr merge --squash --delete-branch`. Then `git checkout main && git pull`.
-10. Wait for the production deploy. Run the production smoke test from `brain/08_TEST_PLAN.md` on the live URL with chrome-devtools. Leave no test data behind.
+10. Wait for the production deploy. Run `node tools/smoke.mjs --url <live URL>`. Exit 0 is a pass; anything else is a fail, whatever the page looks like to you. The checks are read-only, so no test data is left behind.
    Background or scheduled jobs in this release: confirm each schedule is registered on the platform, fire one manual run, and read its log to the end.
 11. If the smoke test fails: roll back first (`brain/09_RUNBOOK.md`), debug second with `workflows/05_debug.md`. Report it honestly.
 12. Tick the phase in `brain/04_PLAN.md`. `node tools/notify-slack.mjs "Released: <phase>. <live url>"`.

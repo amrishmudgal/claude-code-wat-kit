@@ -7,7 +7,7 @@ This folder is a brand-new project and this file is its installer. The owner is 
 1. Tell them in three lines: you will set up the project structure, check their computer, and create a private GitHub repo; it takes about ten minutes; you will only ask for a project name and maybe a login.
 2. Run `node --version`. If Node 20 or newer is missing, give the official install step for their system, wait, and check again.
 3. Create a file named `extract.mjs` containing exactly the code in the "Extractor" block below. Copy it character for character.
-4. Run `node extract.mjs`. It must print "extracted 64 files". Then delete `extract.mjs`.
+4. Run `node extract.mjs`. It must print "extracted 67 files". Then delete `extract.mjs`.
    - If it fails, show the error and stop. Never recreate the payload files by hand or from memory. They must be byte-identical to the payload.
 5. Do not summarise, review, or reason about the payload. Open `workflows/00_bootstrap.md` from disk and follow it step by step.
 
@@ -25,7 +25,7 @@ This folder is a brand-new project and this file is its installer. The owner is 
 ```js
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-const EXPECTED = 64;
+const EXPECTED = 67;
 const src = readFileSync("CLAUDE.md", "utf8").replace(/\r\n/g, "\n");
 const re = /^=====FILE: (.+?)=====\n([\s\S]*?)\n=====END FILE=====$/gm;
 const found = [];
@@ -206,6 +206,13 @@ paths:
 - Read every required env var once at startup or at the top of the job, and fail immediately with the variable's name if it is missing. Never log the value. Third-party IDs (workspace, channel, list) are env vars too, not hardcoded and not looked up at runtime.
 - Scheduled polling uses a lookback window slightly larger than the interval, with idempotency absorbing the overlap.
 - Log events, never secrets or personal data.
+
+## Deterministic core
+- Business rules, money, dates, permissions, quotas, state transitions and calculations are plain functions with unit tests. Invariants that must never break are also database constraints (not null, unique, check, foreign key), so a bug in code cannot corrupt data.
+- Statuses are an explicit state machine: a fixed list of states and allowed transitions, enforced in one place.
+- A model call is an untrusted outside service at the edge. Input is assembled by code. Output is parsed against a schema and rejected if it does not fit. The model never decides what is written, charged, sent or deleted: it returns data, and code decides. No arithmetic, date maths or ID lookups by a model.
+- Every model call has a timeout, a retry limit, a logged cost, and a non-AI fallback path.
+- Same input, same output: no hidden dependence on the clock, random values or request order in business logic. Pass them in.
 =====END FILE=====
 =====FILE: .claude/rules/frontend.md=====
 ---
@@ -550,7 +557,7 @@ tools/       (T)       small scripts that do exact jobs the same way every time
 local  →  preview  →  live           Claude tests each stage in a real browser itself
 ```
 
-Two habits are built into every task. **Order of work:** understand, research, clarify product questions, plan in plain English, build, set up settings, test locally, deploy, verify live. **Self-improvement:** when something fails, Claude fixes it, proves the fix, and proposes a change to the procedure it belongs to. You approve it, and the same mistake does not come back in a later session. Procedures never change behind your back.
+Two habits are built into every task. **Order of work:** understand, research, clarify product questions, plan in plain English, build, set up settings, test locally, deploy, verify live. **Deterministic first:** anything that recurs, must be exact, touches secrets or spends money is a script, and proof is always an exit code or a number (tests, pixel diff, smoke test), never "I looked and it seems fine". The same rule shapes the app: business rules live in tested code and database constraints, and any AI call sits at the edge returning validated data. **Self-improvement:** when something fails, Claude fixes it, proves the fix, and proposes a change to the procedure it belongs to. You approve it, and the same mistake does not come back in a later session. Procedures never change behind your back.
 
 The chat is not where the project lives. Everything that matters is written to files. That is why clearing the chat loses nothing.
 
@@ -797,7 +804,7 @@ Created from a single bootstrap `CLAUDE.md`, which unpacked this structure and r
 | `CLAUDE.md` | Rules loaded every session: the loop, what Claude does alone, the few things it needs from you |
 | `brain/` | Project memory: PRD, architecture, design, plan, state, decisions, security, tests, runbook |
 | `workflows/` | Procedures Claude follows for each kind of work (the W in WAT) |
-| `tools/` | Deterministic Node scripts Claude runs instead of improvising (the T in WAT) |
+| `tools/` | Deterministic Node scripts Claude runs instead of improvising (the T in WAT). Registry: `tools/README.md` |
 | `.claude/` | Settings, hooks, slash commands, subagents, path-scoped rules, the frontend-design skill |
 | `design/` | Brand assets, reference mockups, visual baselines |
 
@@ -1064,13 +1071,13 @@ Run workflows/00_bootstrap.md.
 <!-- One per line: numbered steps a user takes, and what they must see. Start with sign up → log in → core action → refresh → log out. -->
 
 ## Must-fail cases
-<!-- Logged-out user opens a private URL. User A requests user B's record by ID. Invalid form input. Expired session. Outside service is down. -->
+<!-- All automated, all in `check`. Logged-out user opens a private URL. User A requests, updates, deletes user B's record by ID (one case per user-data table). Invalid form input. Expired session. Outside service is down. -->
 
 ## Visual checks
 `node tools/visual-diff.mjs` passes for every screen in `design/visual.json` (design and regression). 768 px and a keyboard-only pass are checked by hand with chrome-devtools.
 
-## Production smoke test (after every release, on the live URL)
-<!-- 5 steps, under 3 minutes, no test data left behind. -->
+## Production smoke test (after every release, on the preview and the live URL)
+`node tools/smoke.mjs --url <base>`. The checks live in `tools/smoke.json`: read-only, under a minute, one per screen or endpoint that must be alive. The exit code decides rollback.
 =====END FILE=====
 =====FILE: brain/09_RUNBOOK.md=====
 # Runbook
@@ -1113,6 +1120,40 @@ See `workflows/07_release.md`.
 =====END FILE=====
 =====FILE: design/mockups/.gitkeep=====
 
+=====END FILE=====
+=====FILE: tools/README.md=====
+# Tool registry
+
+Every deterministic script in this project, in one place. **Check here before building anything. Add a row when you create a tool.** A tool that is not listed will not be found by the next session, and the work will be redone by hand.
+
+A step belongs in a tool when it (a) recurs, (b) must be exact, (c) touches secrets, or (d) spends money, **and** needs no judgement. If you have done the same sequence by hand twice, the third time is a tool. Tools are engineering: you create and change them without asking. Workflows that call them change only with the owner's yes.
+
+Rules for every tool: one job; usage in the header comment; reads config from a file, not from edits to the script; prints names, counts and numbers, never secret values or large blobs; meaningful exit code (0 ok, 1 failed, 2 blocked, 3 cannot run); safe to run twice.
+
+## Kit tools
+
+| Tool | Job | Run |
+|---|---|---|
+| `preflight.mjs` | Is this machine ready: git, Node, gh, logins | `node tools/preflight.mjs` |
+| `check.mjs` + `checks.json` | Format, lint, typecheck, test, secret scan; build and e2e without `--fast` | `node tools/check.mjs [--fast]` |
+| `secret-scan.mjs` | Keys, tokens, private keys in tracked files | runs inside `check` and CI |
+| `env-check.mjs` | Env vars by name: SET or MISSING, wrong public prefix | `node tools/env-check.mjs` |
+| `env-push.mjs` | Send env values to the host without showing them | `node tools/env-push.mjs --file .env.production.local --target production,preview [--dry-run]` |
+| `visual-diff.mjs` + `design/visual.json` | Built screen vs approved design and vs baseline, in pixels | `node tools/visual-diff.mjs [--only x] [--approve]` |
+| `smoke.mjs` + `smoke.json` | Read-only checks against a live URL; exit code decides rollback | `node tools/smoke.mjs --url <base>` |
+| `guard.mjs` | Blocks dangerous shell commands (hook) | automatic |
+| `session-brief.mjs` | Prints STATE into each new session (hook) | automatic |
+| `stop-check.mjs` | Refuses to end a turn with stale STATE; context warning (hook) | automatic |
+| `notify-slack.mjs` | One-line alert to the owner's webhook | `node tools/notify-slack.mjs "text"` |
+
+## Project tools
+<!-- Added by the agent as the project grows. Typical first ones, created in workflows/02_stack-selection.md:
+| `db-reset-local.mjs` | Recreate the local database from migrations and seed | ... |
+| `seed.mjs` | Deterministic demo data, same every time | ... |
+| `gen-types.mjs` | Regenerate types from the database schema | ... |
+-->
+| Tool | Job | Run |
+|---|---|---|
 =====END FILE=====
 =====FILE: tools/check.mjs=====
 #!/usr/bin/env node
@@ -1391,6 +1432,84 @@ console.log(lines.slice(0, 60).join("\n"));
 console.log("[session-brief] Whatever the owner typed, continue from Next action above. Do not ask them what to do.");
 if (lines.length > 60) console.log(`... (${lines.length - 60} more lines - STATE is too long; trim it at the next /handoff)`);
 =====END FILE=====
+=====FILE: tools/smoke.json=====
+{
+  "_note": "Read-only checks run by tools/smoke.mjs after every release. Started in workflows/02_stack-selection.md, extended by every phase that ships a screen or endpoint. Never add a check that writes data.",
+  "checks": []
+}
+=====END FILE=====
+=====FILE: tools/smoke.mjs=====
+#!/usr/bin/env node
+// Production smoke test. The same checks, the same way, after every release. The exit code decides rollback, not an opinion.
+//
+//   node tools/smoke.mjs --url https://app.example.com          run every check in tools/smoke.json against that base URL
+//   node tools/smoke.mjs --url http://localhost:3000 --only home
+//
+// Exit 0 = all passed. Exit 1 = at least one failed (roll back first, debug second). Exit 3 = config or dependency problem.
+// Checks are read-only by design: GET requests and page loads. Nothing here may create data on production.
+//
+// A check in tools/smoke.json:
+//   { "name": "home", "path": "/", "status": 200, "contains": "Sign in" }                       plain HTTP, no browser needed
+//   { "name": "private redirects", "path": "/dashboard", "status": [302, 307, 401], "redirect": "manual" }
+//   { "name": "health", "path": "/api/health", "status": 200, "json": { "ok": true }, "maxMs": 1500 }
+//   { "name": "login renders", "path": "/login", "selector": "form button[type=submit]", "noConsoleErrors": true }   needs Playwright
+import { readFileSync, existsSync } from "node:fs";
+
+const args = process.argv.slice(2);
+const opt = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
+const base = (opt("--url") ?? "").replace(/\/+$/, "");
+const only = opt("--only");
+const file = opt("--config") ?? "tools/smoke.json";
+if (!/^https?:\/\//.test(base)) { console.error("smoke: pass the base URL, for example --url https://app.example.com"); process.exit(3); }
+if (!existsSync(file)) { console.error(`smoke: ${file} not found. It is filled in by workflows/02_stack-selection.md and extended by every phase.`); process.exit(3); }
+
+let checks;
+try { checks = JSON.parse(readFileSync(file, "utf8")).checks ?? []; } catch (e) { console.error(`smoke: ${file} is not valid JSON: ${e.message}`); process.exit(3); }
+if (only) checks = checks.filter((c) => c.name === only);
+if (!checks.length) { console.error("smoke: no checks to run. An empty smoke test proves nothing, so this counts as a failure."); process.exit(1); }
+
+const subset = (want, got) => Object.entries(want).every(([k, v]) => (v && typeof v === "object" ? got?.[k] && subset(v, got[k]) : got?.[k] === v));
+let browser;
+const rows = [];
+for (const c of checks) {
+  const url = base + c.path, started = Date.now(), problems = [];
+  try {
+    if (c.selector || c.noConsoleErrors) {
+      if (!browser) {
+        let chromium;
+        try { ({ chromium } = await import("playwright")); } catch { console.error("smoke: this check needs a browser. Run: npm --prefix tools install && npx --prefix tools playwright install chromium"); process.exit(3); }
+        browser = await chromium.launch();
+      }
+      const page = await browser.newPage(), errors = [];
+      page.on("console", (m) => m.type() === "error" && errors.push(m.text().slice(0, 120)));
+      page.on("pageerror", (e) => errors.push(String(e).slice(0, 120)));
+      const res = await page.goto(url, { waitUntil: "networkidle", timeout: c.maxMs ?? 20000 });
+      const want = [c.status ?? 200].flat();
+      if (!want.includes(res?.status())) problems.push(`status ${res?.status()}, wanted ${want.join("/")}`);
+      if (c.selector && !(await page.locator(c.selector).first().isVisible().catch(() => false))) problems.push(`selector not visible: ${c.selector}`);
+      if (c.contains && !(await page.content()).includes(c.contains)) problems.push(`text missing: "${c.contains}"`);
+      if (c.noConsoleErrors && errors.length) problems.push(`${errors.length} console error(s): ${errors[0]}`);
+      await page.close();
+    } else {
+      const res = await fetch(url, { redirect: c.redirect ?? "follow", signal: AbortSignal.timeout(c.maxMs ?? 20000), headers: { "user-agent": "wat-kit-smoke" } });
+      const want = [c.status ?? 200].flat();
+      if (!want.includes(res.status)) problems.push(`status ${res.status}, wanted ${want.join("/")}`);
+      const body = c.contains || c.json ? await res.text() : "";
+      if (c.contains && !body.includes(c.contains)) problems.push(`text missing: "${c.contains}"`);
+      if (c.json) { let j; try { j = JSON.parse(body); } catch { problems.push("response is not JSON"); } if (j && !subset(c.json, j)) problems.push(`json does not contain ${JSON.stringify(c.json)}`); }
+    }
+  } catch (e) { problems.push(e.name === "TimeoutError" ? `timed out after ${c.maxMs ?? 20000} ms` : String(e.message ?? e).slice(0, 140)); }
+  const ms = Date.now() - started;
+  if (c.maxMs && ms > c.maxMs && !problems.length) problems.push(`took ${ms} ms, budget ${c.maxMs} ms`);
+  rows.push({ name: c.name, ms, problems });
+}
+if (browser) await browser.close();
+
+for (const r of rows) console.log(`${r.problems.length ? "FAIL" : "ok  "}  ${r.name.padEnd(28)} ${String(r.ms).padStart(6)} ms  ${r.problems.join("; ")}`);
+const failed = rows.filter((r) => r.problems.length).length;
+console.log(`smoke: ${rows.length - failed}/${rows.length} passed against ${base}`);
+process.exit(failed ? 1 : 0);
+=====END FILE=====
 =====FILE: tools/stop-check.mjs=====
 #!/usr/bin/env node
 // Stop hook. The owner will not notice stale state or a heavy session, so this does.
@@ -1635,12 +1754,13 @@ Then
    - Mobile: decide native versus installable web app from the PRD, not from habit.
 4. One language across app and tools where possible. `tools/` ships as Node so it runs on every OS. Add Python tools only if the stack is Python.
 5. Send the `researcher` subagent to verify, today, for every paid-capable service: free-tier limits, first paid price, the limit this app will hit first, and that the versions and APIs you plan to use exist. Never quote a price from memory.
-6. If the app has an AI feature, first ask whether a rule, query or normal API does the job. If an LLM is needed, record failure mode, cost per run, latency budget, definition of correct, human fallback, and the model swap path.
+6. If the app has an AI feature, first ask whether a rule, query or normal API does the job. Most "AI features" are 90% ordinary code with one model call in the middle: design them that way. If an LLM is needed, record failure mode, cost per run, latency budget, definition of correct, human fallback, and the model swap path.
 
 ## Write it down
 - Fill `brain/02_ARCHITECTURE.md` completely, including folder layout, boundaries and data model.
 - One ADR per layer in `brain/06_DECISIONS.md`, each with cost and swap path.
-- Fill `tools/checks.json` and the Project commands block in `CLAUDE.md`. Playwright is already installed under `tools/` for visual QA; use it as the end-to-end runner too unless the stack has a strong native one.
+- Fill `tools/checks.json`, the first checks in `tools/smoke.json` (home page, health endpoint, a private URL that must redirect or return 401), and the Project commands block in `CLAUDE.md`.
+- Create the first project tools and register them in `tools/README.md`: reset the local database from migrations, seed deterministic demo data, regenerate types from the schema. Prefer wrapping the stack's own CLI over writing logic. Playwright is already installed under `tools/` for visual QA; use it as the end-to-end runner too unless the stack has a strong native one.
 - Fill the Levels section of `brain/08_TEST_PLAN.md` and the Environments table in `brain/09_RUNBOOK.md`.
 - Add stack-specific entries to `.gitignore`, a CI job to `.github/workflows/ci.yml`, and the app's package ecosystem to `.github/dependabot.yml`.
 - Draw the component flowchart and the ER diagram in `brain/02_ARCHITECTURE.md` (mermaid).
@@ -1697,21 +1817,23 @@ After the yes
 **Goal:** one task from the current phase file, finished, verified in a real browser, committed and pushed. No owner involvement.
 
 1. Read the task and its acceptance criteria. Open only the files it names, plus the `brain/` sections that `00_INDEX.md` maps to it.
-2. Look for something to reuse before writing anything new: a component, a helper, a query, and a script in `tools/`.
+2. Look for something to reuse before writing anything new: a component, a helper, a query, and a script in `tools/README.md`. For boilerplate, use the stack's own generator or CLI (new migration, types from the schema, scaffolds) instead of writing it by hand.
    If the task uses an outside API or a library feature you have not already used in this repo, send the `researcher` subagent to confirm it exists and how it authenticates and rate-limits. Do not code against an API from memory.
 3. State the plan in 8 lines or fewer. If it needs a new dependency, a schema change outside the task, or more than about 6 files, the task is too big: re-slice it in the phase file and continue with the first slice.
 4. Be on the phase branch `phase/<N>-<name>`, never `main`.
-5. Implement the smallest change that meets the criteria. Follow `.claude/rules/`. Handle the two standing edge cases for anything that talks to the outside: nothing new came back, and the call failed.
-6. Data change: write a migration, apply it to the local database, run the tests, note the rollback in the migration.
-7. New env var or service: `workflows/08_add-service.md`. If it needs a key from the owner, ask once with full steps, then continue with the next unblocked task.
-8. Verify yourself, in this order:
+5. Turn each acceptance criterion into an automated test first, including the task's must-fail case. It fails now; that is the point. This test, not your impression of the screen, is what proves the task.
+6. Implement the smallest change that meets the criteria. Rules, calculations, permissions and state changes go in plain code and database constraints, never in a prompt. Follow `.claude/rules/`. Handle the two standing edge cases for anything that talks to the outside: nothing new came back, and the call failed.
+7. Data change: create the migration with the database CLI, apply it to the local database, run the tests, note the rollback in the migration. Regenerate types from the schema with the project tool, do not hand-edit them.
+8. New env var or service: `workflows/08_add-service.md`. If it needs a key from the owner, ask once with full steps, then continue with the next unblocked task.
+9. Prove it, in this order. Each line is an exit code or a number:
+   - the tests from step 5 now pass
    - `node tools/check.mjs --fast`
-   - behaviour: drive the running app with chrome-devtools. Do the task's acceptance steps as a user would. Console and network must be clean.
-   - the must-fail case for this task from `brain/08_TEST_PLAN.md`.
-   - looks: `workflows/10_visual-qa.md` for every screen the task touched.
-9. Add or update tests. Add the flow to `brain/08_TEST_PLAN.md` if new.
-10. Commit `feat|fix|chore(scope): what changed`, one task one commit, and push the branch.
-11. Close the session with `/handoff` (you run its steps yourself; the owner never types it).
+   - looks: `workflows/10_visual-qa.md` for every screen the task touched
+   - then drive the running app once with chrome-devtools as a user would: console and network must be clean. This is for catching what no test looks for, not a substitute for one. Anything you find becomes a test.
+10. New screen or endpoint that must be alive in production: add a read-only check to `tools/smoke.json`. New flow: add it to `brain/08_TEST_PLAN.md`.
+11. Did any sequence by hand for the second time (resetting data, seeding, calling an admin API)? Write the tool, register it in `tools/README.md`.
+12. Commit `feat|fix|chore(scope): what changed`, one task one commit, and push the branch.
+13. Close the session with `/handoff` (you run its steps yourself; the owner never types it).
 
 Something failed along the way: run the self-improvement loop in `workflows/README.md` and record the proposed workflow change in STATE before closing the task.
 
@@ -1745,7 +1867,7 @@ Blocked by something only the owner can give: write exactly what you need under 
 1. Run the `security-auditor` subagent.
 2. Fix every blocker, one at a time, each with a test that would catch it coming back.
 3. Walk `brain/07_SECURITY.md` yourself and tick what is now true, with the file that proves it. Mark N/A with a reason.
-4. Do the two-account test by hand with chrome-devtools: sign in as user A, copy the ID of something A owns, sign in as user B, request it directly. It must fail.
+4. The two-account isolation test must exist as an automated test and run in `check`: user B requests, updates and deletes a record owned by user A, by ID, through the API and directly against the database with B's session. Every attempt must fail. One case per table that holds user data; a new table without a case is a blocker. Explore by hand with chrome-devtools if you like, but only the automated test counts, because it reruns on every change.
 5. Check the production build output for secrets: build, then search the client bundle for the names of server-only variables.
 6. Spend caps or billing alerts on each paid service. Set them yourself where the CLI or API allows. Where only the dashboard can, give the owner the clicks.
 7. Record the review date and result in `brain/09_RUNBOOK.md`.
@@ -1764,11 +1886,11 @@ Blocked by something only the owner can give: write exactly what you need under 
 5. Cloud database: apply this phase's migrations to the cloud project with the stack's migration command. They were already applied and tested locally. Additive changes go before the code is merged. Destructive changes follow the two-release rule in `CLAUDE.md`, with a backup first once real users exist.
 6. Push the branch. Open a PR: what a user can now do, migrations included, new env vars, known issues, visual-diff numbers.
 7. Wait for CI and the preview deployment (`gh pr checks --watch`). If CI fails, fix it. Never bypass it.
-8. Open the preview URL with chrome-devtools. Run the critical flows from `brain/08_TEST_PLAN.md` at 375 and 1440. Console and network clean.
+8. Run `node tools/smoke.mjs --url <preview URL>`. If it fails, do not merge. Then open the preview URL with chrome-devtools. Run the critical flows from `brain/08_TEST_PLAN.md` at 375 and 1440. Console and network clean.
 
 ## Production
 9. Merge: `gh pr merge --squash --delete-branch`. Then `git checkout main && git pull`.
-10. Wait for the production deploy. Run the production smoke test from `brain/08_TEST_PLAN.md` on the live URL with chrome-devtools. Leave no test data behind.
+10. Wait for the production deploy. Run `node tools/smoke.mjs --url <live URL>`. Exit 0 is a pass; anything else is a fail, whatever the page looks like to you. The checks are read-only, so no test data is left behind.
    Background or scheduled jobs in this release: confirm each schedule is registered on the platform, fire one manual run, and read its log to the end.
 11. If the smoke test fails: roll back first (`brain/09_RUNBOOK.md`), debug second with `workflows/05_debug.md`. Report it honestly.
 12. Tick the phase in `brain/04_PLAN.md`. `node tools/notify-slack.mjs "Released: <phase>. <live url>"`.
@@ -1867,16 +1989,26 @@ If the owner wants to point at things instead of describing them, and the stack 
 
 1. **Workflow first.** Before a kind of work you have a workflow for, open it and follow it. Do not improvise a procedure that is already written down.
 2. **Look for an existing tool before building anything.** Check `tools/`. Only write a new script when nothing there does the job.
-3. **Do not do by hand what a tool can do.** If a step will recur, or must be exact (comparing, counting, migrating, pushing config, calling a paid API), write the tool once, test it, then run it. Example: to check a screen against the design, do not eyeball a screenshot. Run `tools/visual-diff.mjs` and read the number.
+3. **Do not do by hand what a tool can do.** `tools/README.md` is the registry: read it first, add a row when you create a tool. Rule of two: a sequence done by hand twice becomes a tool the third time. If a step will recur, or must be exact (comparing, counting, migrating, pushing config, calling a paid API), write the tool once, test it, then run it. Example: to check a screen against the design, do not eyeball a screenshot. Run `tools/visual-diff.mjs` and read the number.
 4. **Order of work, always:** understand → research → clarify (product questions only, batched) → plan in plain English → build → environment setup → test locally → deploy → verify live. Never skip from idea to deploy.
 5. **Paid calls.** Test a tool that spends money or credits once, on the smallest input. Never retry a paid call in a loop. If getting it right will take more than a few paid runs, tell the owner the expected cost first. This is a spending question, not an engineering one.
+
+## Where determinism applies: three layers
+
+| Layer | Probabilistic (you) | Deterministic (code) |
+|---|---|---|
+| **How you work** | Choosing the workflow, planning, diagnosing | Checks, secret scan, env audit and push, guard, hooks, CI, generators and CLIs for boilerplate (migrations, types from schema, scaffolds) |
+| **How the work is proven** | Deciding what is worth testing; exploring with chrome-devtools | An automated test per acceptance criterion, the must-fail and two-account isolation tests, `visual-diff` numbers, `smoke` exit code. You never report "it works" on the strength of having looked |
+| **How the app itself is built** | Only the parts of the product that truly need language or judgement | Business rules, money, dates, permissions, state transitions and calculations live in plain tested code and database constraints. An LLM call sits at the edge, returns schema-validated data, and never decides what gets written or charged |
+
+What stays with you: anything needing judgement. Do not script a decision; script the execution of it.
 
 ## The self-improvement loop
 
 Every failure makes the system stronger, or it will happen again next session when you remember nothing:
 
 1. Identify what broke. Read the full error and trace, not the first line.
-2. Fix the tool or the code.
+2. Fix the tool or the code. If the failure came from doing a step by hand, the fix is a tool.
 3. Verify the fix works.
 4. Capture what you learned as a proposed change to the workflow it belongs to: rate limits, timing quirks, a batch endpoint you found, an assumption that was wrong. One or two dated lines for its `## Learned` section, or a corrected step. Write the proposal into `brain/05_STATE.md` straight away so it survives the session.
 5. Get the owner's yes, apply it, and move on with a more robust system.
@@ -1941,11 +2073,11 @@ You are the lead engineer and the only engineer on this project. The owner comes
 Reasoning is probabilistic, code is deterministic. Five hand-done steps at 90% each succeed 59% of the time. So you reason and scripts execute.
 - `workflows/` are the SOPs. Before discovery, stack choice, design, building, debugging, visual QA, security review, release, or adding a service, open the matching workflow and follow it.
 - You are the agent, the decision-maker: read the workflow, run tools in order, handle failures, connect intent to execution. Do not do by hand what a tool can do.
-- `tools/` are deterministic scripts. Check `tools/` before building anything. If a step will recur or must be exact and no tool exists, write the tool, test it, then run it.
+- `tools/` are deterministic scripts, indexed in `tools/README.md`. Check there before building anything. A step that recurs, must be exact, touches secrets or spends money, and needs no judgement, is a tool: done by hand twice, the third time you write it, test it, register it. Proof is a script's exit code or a number, never your impression: tests for behaviour, `visual-diff` for looks, `smoke` for a release.
 - Self-improvement loop on every failure: read the full error → fix → verify → record the lesson as a proposed workflow change in `brain/05_STATE.md` → move on. Workflows are the owner's standing instructions: you never create, edit or delete one without their yes. Show the exact line and the reason in your end-of-task report, apply it after approval.
 
 ## Order of work, always
-understand → research (`researcher` subagent: docs, pricing, limits, auth) → clarify product questions, batched → plan in plain English, 8 lines or fewer → build the smallest correct change → env setup → test locally (`node tools/check.mjs --fast`, then a real browser yourself: chrome-devtools for behaviour, `node tools/visual-diff.mjs` for looks) → commit, push, deploy → verify live → rewrite STATE → report. Never jump from idea to deploy.
+understand → research (`researcher` subagent: docs, pricing, limits, auth) → clarify product questions, batched → plan in plain English, 8 lines or fewer → build the smallest correct change → env setup → test locally (the task's automated test and `node tools/check.mjs --fast` are the proof; chrome-devtools for console, network and exploring; `node tools/visual-diff.mjs` for looks) → commit, push, deploy → verify live → rewrite STATE → report. Never jump from idea to deploy.
 
 ## The owner is needed only for
 - Access: creating an account, logging in a CLI or plugin, producing an API key, DNS at a registrar, entering a card. Give click-by-click steps, say which variable name each value goes under in `.env.local`, then keep working on anything not blocked while you wait.
@@ -1975,6 +2107,6 @@ Everything else you decide and do. Log hard-to-reverse choices in `brain/06_DECI
 - visual QA: `node tools/visual-diff.mjs`
 - local database:
 
-<!-- Generated by claude-code-wat-kit v0.9.0 -->
+<!-- Generated by claude-code-wat-kit v0.9.1 -->
 =====END FILE=====
 ~~~~~~~~~~

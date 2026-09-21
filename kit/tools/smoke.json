@@ -1,0 +1,4 @@
+{
+  "_note": "Read-only checks run by tools/smoke.mjs after every release. Started in workflows/02_stack-selection.md, extended by every phase that ships a screen or endpoint. Never add a check that writes data.",
+  "checks": []
+}

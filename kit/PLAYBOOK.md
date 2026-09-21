@@ -25,7 +25,7 @@ tools/       (T)       small scripts that do exact jobs the same way every time
 local  →  preview  →  live           Claude tests each stage in a real browser itself
 ```
 
-Two habits are built into every task. **Order of work:** understand, research, clarify product questions, plan in plain English, build, set up settings, test locally, deploy, verify live. **Self-improvement:** when something fails, Claude fixes it, proves the fix, and proposes a change to the procedure it belongs to. You approve it, and the same mistake does not come back in a later session. Procedures never change behind your back.
+Two habits are built into every task. **Order of work:** understand, research, clarify product questions, plan in plain English, build, set up settings, test locally, deploy, verify live. **Deterministic first:** anything that recurs, must be exact, touches secrets or spends money is a script, and proof is always an exit code or a number (tests, pixel diff, smoke test), never "I looked and it seems fine". The same rule shapes the app: business rules live in tested code and database constraints, and any AI call sits at the edge returning validated data. **Self-improvement:** when something fails, Claude fixes it, proves the fix, and proposes a change to the procedure it belongs to. You approve it, and the same mistake does not come back in a later session. Procedures never change behind your back.
 
 The chat is not where the project lives. Everything that matters is written to files. That is why clearing the chat loses nothing.
 
